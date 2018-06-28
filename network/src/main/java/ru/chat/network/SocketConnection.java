@@ -3,6 +3,7 @@
  */
 
 package ru.chat.network;
+
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.Charset;
@@ -15,7 +16,7 @@ public class SocketConnection {
     private final BufferedReader in;
     private final BufferedWriter out;
 
-    private String userNick;
+    public String userNick;
 
     public SocketConnection(SocketConnectionListener eventListener, String host, int port) throws IOException {
         this(new Socket(host, port), eventListener);
@@ -70,7 +71,7 @@ public class SocketConnection {
 
     @Override
     public String toString() {
-        return "SocketConnection{ " + socket.getInetAddress() + ":" + socket.getPort() + " }" ;
+        return "SocketConnection{ " + socket.getInetAddress() + ":" + socket.getPort() + " }";
     }
 
     public String getUserNick() {
@@ -82,3 +83,5 @@ public class SocketConnection {
     }
 
 }
+
+

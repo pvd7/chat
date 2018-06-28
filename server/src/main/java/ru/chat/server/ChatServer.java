@@ -4,6 +4,7 @@
 
 package ru.chat.server;
 
+import ru.chat.network.SocketCommands;
 import ru.chat.network.SocketConnection;
 import ru.chat.network.SocketConnectionListener;
 
@@ -14,6 +15,7 @@ import java.util.*;
 public class ChatServer implements SocketConnectionListener {
 
     public static void main(String[] args) throws IOException {
+//        System.out.println(SocketCommands.getOrDefault("qwe"));
         ChatServer chatServer = new ChatServer();
         chatServer.start(8888);
     }
@@ -21,19 +23,31 @@ public class ChatServer implements SocketConnectionListener {
     // список подключений
     private final List<SocketConnection> socketConnections = new LinkedList<>();
 
-    // проверяет сообщение на наличие служебных комманд
-    private boolean checkCommands(String msg) {
-        return msg.startsWith("/auth")
-               || (msg.startsWith("/w"));
-    }
+    private void parsingReceiveString(SocketConnection socketConnection, String str) {
+        SocketCommands socketCommands;
 
-    private boolean catchCommands(String msg) {
-        if (msg.startsWith("/w")) {
-            String[] parts = str.split("\\s");
-
-            return true;
+        int i = str.indexOf(" ");
+        if (i == -1) {
+            socketCommands = SocketCommands.BROADCAST;
         } else {
-            return false;
+            socketCommands = SocketCommands.getOrDefault(str.substring(0, i), SocketCommands.BROADCAST);
+        }
+
+        String msg = (socketCommands == null) ? str : str.substring(i + 1, str.length());
+
+        switch (socketCommands) {
+            case CHANGE_NICKNAME:
+                changeNickName(socketConnection, msg);
+                break;
+            case SEND_MSG_TO_USER:
+                sendMsgToClient(msg);
+                break;
+            case BROADCAST:
+                broadcastMsg(msg, socketConnection);
+                break;
+            default:
+                broadcastMsg(msg, socketConnection);
+                break;
         }
     }
 
@@ -53,14 +67,12 @@ public class ChatServer implements SocketConnectionListener {
     @Override
     public synchronized void onConnected(SocketConnection socketConnection) {
         socketConnections.add(socketConnection);
-        broadcastMsg(socketConnection,"Client connected: " + socketConnection);
+        broadcastMsg("Client connected: " + socketConnection, socketConnection);
     }
 
     @Override
     public synchronized void onReceiveString(SocketConnection socketConnection, String str) {
-        if (!catchCommands(str)) {
-            broadcastMsg(socketConnection, str);
-        }
+        parsingReceiveString(socketConnection, str);
     }
 
     @Override
@@ -75,10 +87,10 @@ public class ChatServer implements SocketConnectionListener {
     }
 
     private void broadcastMsg(String str) {
-        broadcastMsg(null, str);
+        broadcastMsg(str, null);
     }
 
-    private void broadcastMsg(SocketConnection socketConnectionFrom, String str) {
+    private void broadcastMsg(String str, SocketConnection socketConnectionFrom) {
         System.out.println(str);
         for (SocketConnection socketConnection : socketConnections) {
             if (!socketConnection.equals(socketConnectionFrom)) {
@@ -87,4 +99,14 @@ public class ChatServer implements SocketConnectionListener {
         }
     }
 
+    private void changeNickName(SocketConnection socketConnection, String str) {
+
+
+    }
+
+    private void sendMsgToClient(String msg) {
+
+    }
 }
+
+
