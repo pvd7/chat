@@ -19,8 +19,23 @@ public class ChatServer implements SocketConnectionListener {
     }
 
     // список подключений
-//    private final Map<String, SocketConnection> connectionMap = new HashMap<>();
-    private final List<SocketConnection> connectionList = new LinkedList<>();
+    private final List<SocketConnection> socketConnections = new LinkedList<>();
+
+    // проверяет сообщение на наличие служебных комманд
+    private boolean checkCommands(String msg) {
+        return msg.startsWith("/auth")
+               || (msg.startsWith("/w"));
+    }
+
+    private boolean catchCommands(String msg) {
+        if (msg.startsWith("/w")) {
+            String[] parts = str.split("\\s");
+
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     public void start(int port) throws IOException {
         System.out.println("Server running...");
@@ -37,18 +52,20 @@ public class ChatServer implements SocketConnectionListener {
 
     @Override
     public synchronized void onConnected(SocketConnection socketConnection) {
-        connectionList.add(socketConnection);
-        broadcastMsg("Client connected: " + socketConnection);
+        socketConnections.add(socketConnection);
+        broadcastMsg(socketConnection,"Client connected: " + socketConnection);
     }
 
     @Override
     public synchronized void onReceiveString(SocketConnection socketConnection, String str) {
-        broadcastMsg(socketConnection, str);
+        if (!catchCommands(str)) {
+            broadcastMsg(socketConnection, str);
+        }
     }
 
     @Override
     public synchronized void onDisconnected(SocketConnection socketConnection) {
-        connectionList.remove(socketConnection);
+        socketConnections.remove(socketConnection);
         broadcastMsg("Client disconnected: " + socketConnection);
     }
 
@@ -63,7 +80,7 @@ public class ChatServer implements SocketConnectionListener {
 
     private void broadcastMsg(SocketConnection socketConnectionFrom, String str) {
         System.out.println(str);
-        for (SocketConnection socketConnection : connectionList) {
+        for (SocketConnection socketConnection : socketConnections) {
             if (!socketConnection.equals(socketConnectionFrom)) {
                 socketConnection.sendString(str);
             }

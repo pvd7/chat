@@ -6,7 +6,6 @@ package ru.chat.network;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import java.util.Scanner;
 
 public class SocketConnection {
 
@@ -14,8 +13,9 @@ public class SocketConnection {
     private final Thread thread;
     private final SocketConnectionListener eventListener;
     private final BufferedReader in;
-//    private final Scanner in;
     private final BufferedWriter out;
+
+    private String userNick;
 
     public SocketConnection(SocketConnectionListener eventListener, String host, int port) throws IOException {
         this(new Socket(host, port), eventListener);
@@ -25,7 +25,6 @@ public class SocketConnection {
         this.socket = socket;
         this.eventListener = eventListener;
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")));
-//        this.in = new Scanner(socket.getInputStream());
         this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")));
         this.thread = new Thread(new Runnable() {
             @Override
@@ -35,7 +34,6 @@ public class SocketConnection {
                     String str;
                     while (!socket.isClosed()) {
                         str = in.readLine();
-//                        str = in.nextLine();
                         eventListener.onReceiveString(SocketConnection.this, str);
                     }
                 } catch (IOException e) {
@@ -72,6 +70,15 @@ public class SocketConnection {
 
     @Override
     public String toString() {
-        return "SocketConnection: " + socket.getInetAddress() + ":" + socket.getPort() ;
+        return "SocketConnection{ " + socket.getInetAddress() + ":" + socket.getPort() + " }" ;
     }
+
+    public String getUserNick() {
+        return userNick;
+    }
+
+    public void setUserNick(String userNick) {
+        this.userNick = userNick;
+    }
+
 }
