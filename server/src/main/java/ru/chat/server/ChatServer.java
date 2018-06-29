@@ -4,50 +4,51 @@
 
 package ru.chat.server;
 
-import ru.chat.network.SocketCommands;
+import ru.chat.network.SocketCommand;
 import ru.chat.network.SocketConnection;
 import ru.chat.network.SocketConnectionListener;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.text.SimpleDateFormat;
 import java.util.*;
+
+import static ru.chat.network.utils.StringUtils.getFirstWord;
 
 public class ChatServer implements SocketConnectionListener {
 
     public static void main(String[] args) throws IOException {
-//        System.out.println(SocketCommands.getOrDefault("qwe"));
         ChatServer chatServer = new ChatServer();
         chatServer.start(8888);
     }
 
     // список подключений
     private final List<SocketConnection> socketConnections = new LinkedList<>();
+    private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss");
 
     private void parsingReceiveString(SocketConnection socketConnection, String str) {
-        SocketCommands socketCommands;
+        String cmd;
 
-        int i = str.indexOf(" ");
-        if (i == -1) {
-            socketCommands = SocketCommands.BROADCAST;
-        } else {
-            socketCommands = SocketCommands.getOrDefault(str.substring(0, i), SocketCommands.BROADCAST);
-        }
-
-        String msg = (socketCommands == null) ? str : str.substring(i + 1, str.length());
-
-        switch (socketCommands) {
-            case CHANGE_NICKNAME:
-                changeNickName(socketConnection, msg);
+        for (SocketCommand socketCommand : SocketCommand.values()) {
+            cmd = socketCommand.getName();
+            if (str.startsWith(cmd)) {
+                String msg = str.substring(cmd.length()).trim();
+                switch (socketCommand) {
+                    case CHANGE_NICKNAME:
+                        changeNickName(socketConnection, msg);
+                        break;
+                    case SEND_MSG_TO_USER:
+                        sendMsgToUser(msg, socketConnection);
+                        break;
+                    case BROADCAST:
+                        broadcastMsg(msg, socketConnection);
+                        break;
+                    default:
+                        broadcastMsg(msg, socketConnection);
+                        break;
+                }
                 break;
-            case SEND_MSG_TO_USER:
-                sendMsgToClient(msg);
-                break;
-            case BROADCAST:
-                broadcastMsg(msg, socketConnection);
-                break;
-            default:
-                broadcastMsg(msg, socketConnection);
-                break;
+            }
         }
     }
 
@@ -60,6 +61,49 @@ public class ChatServer implements SocketConnectionListener {
                 socketConnection.start();
             } catch (IOException e) {
                 System.out.println("Connection ecxeption: " + e);
+            }
+        }
+    }
+
+    private void broadcastMsg(String str) {
+        broadcastMsg(str, null);
+    }
+
+    private void broadcastMsg(String str, SocketConnection socketConnectionFrom) {
+        System.out.println(str);
+        for (SocketConnection socketConnection : socketConnections) {
+            if (!socketConnection.equals(socketConnectionFrom)) {
+                socketConnection.sendString(str);
+            }
+        }
+    }
+
+    private void changeNickName(SocketConnection socketConnection, String str) {
+        String msg = null;
+        String newNick = getFirstWord(str.trim());
+        String currentNick = socketConnection.getUserNick();
+
+        if (currentNick == null) {
+            msg = "New user: " + newNick;
+        } else if (!currentNick.equals(newNick)) {
+            msg = socketConnection.getUserNick() + " changed nick to " + newNick;
+        }
+
+        if (msg != null) {
+            socketConnection.setUserNick(newNick);
+            broadcastMsg(msg, socketConnection);
+        }
+    }
+
+    private void sendMsgToUser(String str, SocketConnection socketConnectionFrom) {
+        String userNick = getFirstWord(str.trim());
+        for (SocketConnection socketConnection : socketConnections) {
+            if ((userNick != null) && (userNick.equals(socketConnection.getUserNick()))) {
+                String msg = DATE_FORMAT.format(System.currentTimeMillis()) + " "
+                        + socketConnectionFrom.getUserNick() + ": "
+                        + str.substring(userNick.length()).trim();
+                socketConnection.sendString(msg);
+                break;
             }
         }
     }
@@ -86,27 +130,23 @@ public class ChatServer implements SocketConnectionListener {
         System.out.println("SocketConnection exception: " + e);
     }
 
-    private void broadcastMsg(String str) {
-        broadcastMsg(str, null);
-    }
-
-    private void broadcastMsg(String str, SocketConnection socketConnectionFrom) {
-        System.out.println(str);
-        for (SocketConnection socketConnection : socketConnections) {
-            if (!socketConnection.equals(socketConnectionFrom)) {
-                socketConnection.sendString(str);
-            }
-        }
-    }
-
-    private void changeNickName(SocketConnection socketConnection, String str) {
-
-
-    }
-
-    private void sendMsgToClient(String msg) {
-
-    }
 }
 
 
+//        String msg;
+//        SocketCommand socketCommand;
+//
+//        int i = str.indexOf(" ");
+//        if (i == -1) {
+//            socketCommand = SocketCommand.BROADCAST;
+//            msg = str;
+//        } else {
+//            socketCommand = SocketCommand.find(str.substring(0, i));
+//            if (socketCommand == null) socketCommand = SocketCommand.BROADCAST;
+//            msg = str.substring(i + 1, str.length());
+//        }
+
+//    private String getCommand(String str) {
+//        int i = str.indexOf(" ");
+//        return "";
+//    }

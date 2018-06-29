@@ -4,17 +4,15 @@
 
 package ru.chat.client;
 
-import ru.chat.network.SocketCommands;
+import ru.chat.network.SocketCommand;
 import ru.chat.network.SocketConnection;
 import ru.chat.network.SocketConnectionListener;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.Map;
+
+import static ru.chat.network.utils.StringUtils.getFirstWord;
 
 public class ChatWindow extends JFrame implements SocketConnectionListener {
 
@@ -57,7 +55,7 @@ public class ChatWindow extends JFrame implements SocketConnectionListener {
 
         btnSendMsg.addActionListener(e -> onSendMsg());
         tfMsg.addActionListener(e -> onSendMsg());
-        btnChangeNickname.addActionListener(e -> socketConnection.sendString(SocketCommands.CHANGE_NICKNAME.getName() + " " + tfNick.getText()));
+        btnChangeNickname.addActionListener(e -> onChangeNickname());
     }
 
     public void connect(String host, int port) {
@@ -82,18 +80,27 @@ public class ChatWindow extends JFrame implements SocketConnectionListener {
     private void onSendMsg() {
         printMsg(DATE_FORMAT.format(System.currentTimeMillis()) + " " + tfNick.getText() + ": " + tfMsg.getText());
 
-        socketConnection.sendString(tfMsg.getText());
+        String cmd = getFirstWord(tfMsg.getText());
+        SocketCommand socketCommand = SocketCommand.find(cmd);
+        String msg;
+        if (socketCommand == null)
+            msg = SocketCommand.BROADCAST.getName() + " " + tfMsg.getText();
+        else
+            msg = tfMsg.getText();
+        socketConnection.sendString(msg);
 
         tfMsg.setText(null);
         tfMsg.requestFocus();
     }
 
-//    private void on
+    private void onChangeNickname() {
+        socketConnection.sendString(SocketCommand.CHANGE_NICKNAME.getName() + " " + tfNick.getText());
+    }
 
     @Override
     public void onConnected(SocketConnection socketConnection) {
         printMsg("Connection ready: " + socketConnection);
-        socketConnection.sendString("");
+        onChangeNickname();
     }
 
     @Override

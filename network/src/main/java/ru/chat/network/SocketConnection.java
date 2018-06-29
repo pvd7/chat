@@ -50,6 +50,13 @@ public class SocketConnection {
         thread.start();
     }
 
+    public synchronized void sendString(SocketCommand socketCommand, String str) {
+        if (socketCommand == null)
+            sendString(str);
+        else
+            sendString(socketCommand.getName() + " " + str);
+    }
+
     public synchronized void sendString(String str) {
         try {
             out.write(str + "\r\n");
