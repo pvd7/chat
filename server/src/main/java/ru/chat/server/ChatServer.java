@@ -8,10 +8,13 @@ import ru.chat.network.SocketCommand;
 import ru.chat.network.SocketConnection;
 import ru.chat.network.SocketConnectionListener;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import javax.swing.Timer;
 
 import ru.chat.network.utils.StringUtils;
 
@@ -25,8 +28,10 @@ public class ChatServer implements SocketConnectionListener {
         chatServer.start(8888);
     }
 
+    private ServerSocket serverSocket;
     // список подключений
     private final List<SocketConnection> socketConnections = new LinkedList<>();
+
     private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss");
 
     /**
@@ -38,7 +43,6 @@ public class ChatServer implements SocketConnectionListener {
      */
     private void parsingReceiveString(SocketConnection socketConnection, String str) {
         String cmd;
-
         for (SocketCommand socketCommand : SocketCommand.values()) {
             cmd = socketCommand.getName();
             if (str.startsWith(cmd)) {
@@ -70,7 +74,7 @@ public class ChatServer implements SocketConnectionListener {
      */
     public void start(int port) throws IOException {
         System.out.println("Server running...");
-        ServerSocket serverSocket = new ServerSocket(port);
+        serverSocket = new ServerSocket(port);
         while (!serverSocket.isClosed()) {
             try {
                 SocketConnection socketConnection = new SocketConnection(serverSocket.accept(), this);
@@ -94,16 +98,19 @@ public class ChatServer implements SocketConnectionListener {
      * Отправляет широковещательно сообщение, исключая подключение от куда оно пришло
      *
      * @param str                  текст сообщения
-     * @param socketConnectionFrom подключени откуда прилетело сообщение
+     * @param socketConnectionFrom подключение откуда прилетело сообщение
      */
     private void broadcastMsg(String str, SocketConnection socketConnectionFrom) {
-        String msg = prepareSendString(str, socketConnectionFrom);
-        System.out.println(msg);
-        for (SocketConnection socketConnection : socketConnections) {
-            if (!socketConnection.equals(socketConnectionFrom)) {
-                socketConnection.sendString(msg);
-            }
-        }
+        sendMsg(str, null, socketConnectionFrom);
+
+//        String msg = prepareSendString(str, socketConnectionFrom);
+//        System.out.println(msg);
+//
+//        for (SocketConnection socketConnection : socketConnections) {
+//            if (!socketConnection.equals(socketConnectionFrom)) {
+//                socketConnection.sendString(msg);
+//            }
+//        }
     }
 
     /**
@@ -125,6 +132,7 @@ public class ChatServer implements SocketConnectionListener {
 
         if (msg != null) {
             socketConnection.setUserNick(newNick);
+//            socketConnection.sendString(SocketCommand.SEND_MSG_TO_USER.getName() + " commit");
             broadcastMsg(msg);
         }
     }
@@ -137,14 +145,40 @@ public class ChatServer implements SocketConnectionListener {
      */
     private void sendMsgToUser(String str, SocketConnection socketConnectionFrom) {
         String userNickTo = StringUtils.getFirstWord(str.trim());
+        sendMsg(str, userNickTo, socketConnectionFrom);
+//        for (SocketConnection socketConnection : socketConnections) {
+//            if ((userNickTo != null) && (userNickTo.equals(socketConnection.getUserNick()))) {
+//                String msg = prepareSendString(str, socketConnectionFrom);
+//                System.out.println(msg);
+//                socketConnection.sendString(msg);
+//                break;
+//            }
+//        }
+    }
+
+    private void sendMsg(String str, String userNickTo, SocketConnection socketConnectionFrom) {
+        String msg = prepareSendString(str, socketConnectionFrom);
+        System.out.println(msg);
+        boolean toUser = !StringUtils.isEmpty(userNickTo);
+
         for (SocketConnection socketConnection : socketConnections) {
-            if ((userNickTo != null) && (userNickTo.equals(socketConnection.getUserNick()))) {
-                String msg = prepareSendString(str, socketConnectionFrom);
-                System.out.println(msg);
-                socketConnection.sendString(msg);
-                break;
+            if (!socketConnection.equals(socketConnectionFrom)) {
+                if (toUser) {
+                    if (userNickTo.equals(socketConnection.getUserNick())) {
+                        socketConnection.sendString(msg);
+                        break;
+                    }
+                } else {
+                    socketConnection.sendString(msg);
+                }
             }
         }
+//        if ((userNickTo != null) && (userNickTo.equals(socketConnection.getUserNick()))) {
+//            String msg = prepareSendString(str, socketConnectionFrom);
+//            System.out.println(msg);
+//            socketConnection.sendString(msg);
+//            break;
+//        }
     }
 
     private String prepareSendString(String str, SocketConnection socketConnectionFrom) {
@@ -166,7 +200,7 @@ public class ChatServer implements SocketConnectionListener {
 
     @Override
     public synchronized void onDisconnected(SocketConnection socketConnection) {
-        socketConnections.remove(socketConnection);
+        socketConnections.remove(socketConnection.getUserNick());
         broadcastMsg("Client disconnected: " + socketConnection);
     }
 

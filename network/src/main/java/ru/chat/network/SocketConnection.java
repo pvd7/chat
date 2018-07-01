@@ -4,6 +4,9 @@
 
 package ru.chat.network;
 
+import ru.chat.network.utils.StringUtils;
+
+import javax.swing.*;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.Charset;
@@ -46,6 +49,16 @@ public class SocketConnection {
         this.eventListener = eventListener;
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8")));
         this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8")));
+
+        Timer timer = new Timer(120000, e -> {
+            if (StringUtils.isEmpty(userNick)) {
+                disconnect();
+                System.out.println("disconect");
+//                УРАААА мы в 1/4 финала!!!
+            }
+        });
+        timer.start();
+
         this.thread = new Thread(() -> {
             try {
                 eventListener.onConnected(SocketConnection.this);

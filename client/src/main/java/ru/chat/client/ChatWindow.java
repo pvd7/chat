@@ -7,6 +7,7 @@ package ru.chat.client;
 import ru.chat.network.SocketCommand;
 import ru.chat.network.SocketConnection;
 import ru.chat.network.SocketConnectionListener;
+import ru.chat.network.utils.StringUtils;
 
 import javax.swing.*;
 import java.io.IOException;
@@ -99,6 +100,10 @@ public class ChatWindow extends JFrame implements SocketConnectionListener {
     }
 
     private void onChangeNickname() {
+//        String msg;
+//        if (StringUtils.isEmpty(socketConnection.getUserNick())) {
+//            msg
+//        }
         socketConnection.sendString(SocketCommand.CHANGE_NICKNAME.getName() + " " + tfNick.getText());
     }
 
