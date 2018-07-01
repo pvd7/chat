@@ -13,8 +13,11 @@ import java.net.ServerSocket;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import static ru.chat.network.utils.StringUtils.getFirstWord;
+import ru.chat.network.utils.StringUtils;
 
+/**
+ * Сервер чата
+ */
 public class ChatServer implements SocketConnectionListener {
 
     public static void main(String[] args) throws IOException {
@@ -26,6 +29,13 @@ public class ChatServer implements SocketConnectionListener {
     private final List<SocketConnection> socketConnections = new LinkedList<>();
     private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss");
 
+    /**
+     * Разбор полученных сообщений
+     * в зависимотси от управляющих команд вызывает разные методы обработки сообщения
+     *
+     * @param socketConnection подключение откуда прилетело сообщение
+     * @param str              текст сообщения
+     */
     private void parsingReceiveString(SocketConnection socketConnection, String str) {
         String cmd;
 
@@ -52,6 +62,12 @@ public class ChatServer implements SocketConnectionListener {
         }
     }
 
+    /**
+     * Запускает сервер чата
+     *
+     * @param port порт сервера
+     * @throws IOException исключение
+     */
     public void start(int port) throws IOException {
         System.out.println("Server running...");
         ServerSocket serverSocket = new ServerSocket(port);
@@ -65,22 +81,40 @@ public class ChatServer implements SocketConnectionListener {
         }
     }
 
+    /**
+     * Отправляет широковещательное сообщение
+     *
+     * @param str тест сообщения
+     */
     private void broadcastMsg(String str) {
         broadcastMsg(str, null);
     }
 
+    /**
+     * Отправляет широковещательно сообщение, исключая подключение от куда оно пришло
+     *
+     * @param str                  текст сообщения
+     * @param socketConnectionFrom подключени откуда прилетело сообщение
+     */
     private void broadcastMsg(String str, SocketConnection socketConnectionFrom) {
-        System.out.println(str);
+        String msg = prepareSendString(str, socketConnectionFrom);
+        System.out.println(msg);
         for (SocketConnection socketConnection : socketConnections) {
             if (!socketConnection.equals(socketConnectionFrom)) {
-                socketConnection.sendString(str);
+                socketConnection.sendString(msg);
             }
         }
     }
 
+    /**
+     * Изменяет Ник пользователя на сервере
+     *
+     * @param socketConnection подключение которое меняет Ник
+     * @param str              исходное сообщение
+     */
     private void changeNickName(SocketConnection socketConnection, String str) {
         String msg = null;
-        String newNick = getFirstWord(str.trim());
+        String newNick = StringUtils.getFirstWord(str.trim());
         String currentNick = socketConnection.getUserNick();
 
         if (currentNick == null) {
@@ -91,21 +125,32 @@ public class ChatServer implements SocketConnectionListener {
 
         if (msg != null) {
             socketConnection.setUserNick(newNick);
-            broadcastMsg(msg, socketConnection);
+            broadcastMsg(msg);
         }
     }
 
+    /**
+     * Отправляет сообщение пользователю
+     *
+     * @param str                  исходное сообещение, содержит Ник кому переслать это сообщение
+     * @param socketConnectionFrom подключени откуда прилетело сообщение
+     */
     private void sendMsgToUser(String str, SocketConnection socketConnectionFrom) {
-        String userNick = getFirstWord(str.trim());
+        String userNickTo = StringUtils.getFirstWord(str.trim());
         for (SocketConnection socketConnection : socketConnections) {
-            if ((userNick != null) && (userNick.equals(socketConnection.getUserNick()))) {
-                String msg = DATE_FORMAT.format(System.currentTimeMillis()) + " "
-                        + socketConnectionFrom.getUserNick() + ": "
-                        + str.substring(userNick.length()).trim();
+            if ((userNickTo != null) && (userNickTo.equals(socketConnection.getUserNick()))) {
+                String msg = prepareSendString(str, socketConnectionFrom);
+                System.out.println(msg);
                 socketConnection.sendString(msg);
                 break;
             }
         }
+    }
+
+    private String prepareSendString(String str, SocketConnection socketConnectionFrom) {
+        return DATE_FORMAT.format(System.currentTimeMillis()) + " "
+                + (((socketConnectionFrom != null) && (!StringUtils.isEmpty(socketConnectionFrom.getUserNick()))) ? socketConnectionFrom.getUserNick() : "")
+                + ": " + str;
     }
 
     @Override
@@ -133,20 +178,3 @@ public class ChatServer implements SocketConnectionListener {
 }
 
 
-//        String msg;
-//        SocketCommand socketCommand;
-//
-//        int i = str.indexOf(" ");
-//        if (i == -1) {
-//            socketCommand = SocketCommand.BROADCAST;
-//            msg = str;
-//        } else {
-//            socketCommand = SocketCommand.find(str.substring(0, i));
-//            if (socketCommand == null) socketCommand = SocketCommand.BROADCAST;
-//            msg = str.substring(i + 1, str.length());
-//        }
-
-//    private String getCommand(String str) {
-//        int i = str.indexOf(" ");
-//        return "";
-//    }

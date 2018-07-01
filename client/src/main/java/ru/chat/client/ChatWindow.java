@@ -14,17 +14,20 @@ import java.text.SimpleDateFormat;
 
 import static ru.chat.network.utils.StringUtils.getFirstWord;
 
+/**
+ * Клиент чата
+ */
 public class ChatWindow extends JFrame implements SocketConnectionListener {
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                ChatWindow dialog = new ChatWindow();
-                dialog.setVisible(true);
-                dialog.tfMsg.requestFocus();
-                dialog.connect(HOST, PORT);
-            }
+        String HOST = "localhost";
+        int PORT = 8888;
+
+        SwingUtilities.invokeLater(() -> {
+            ChatWindow dialog = new ChatWindow();
+            dialog.setVisible(true);
+            dialog.tfMsg.requestFocus();
+            dialog.connect(HOST, PORT);
         });
     }
 
@@ -34,9 +37,6 @@ public class ChatWindow extends JFrame implements SocketConnectionListener {
     private JTextField tfNick;
     private JTextArea taMsgs;
     private JButton btnChangeNickname;
-
-    private static final String HOST = "localhost";
-    private static final int PORT = 8888;
 
     private static final int WINDOW_WIDTH = 600;
     private static final int WINDOW_HEIGHT = 400;
@@ -58,7 +58,7 @@ public class ChatWindow extends JFrame implements SocketConnectionListener {
         btnChangeNickname.addActionListener(e -> onChangeNickname());
     }
 
-    public void connect(String host, int port) {
+    private void connect(String host, int port) {
         try {
             socketConnection = new SocketConnection(this, host, port);
             socketConnection.start();
@@ -67,22 +67,27 @@ public class ChatWindow extends JFrame implements SocketConnectionListener {
         }
     }
 
+    /**
+     * Выводи сообщение на экран
+     *
+     * @param str сообщение
+     */
     private synchronized void printMsg(String str) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                taMsgs.append(str + "\n");
-                taMsgs.setCaretPosition(taMsgs.getDocument().getLength());
-            }
+        SwingUtilities.invokeLater(() -> {
+            taMsgs.append(str + "\n");
+            taMsgs.setCaretPosition(taMsgs.getDocument().getLength());
         });
     }
 
+    /**
+     * Отправляет сообщение
+     */
     private void onSendMsg() {
         printMsg(DATE_FORMAT.format(System.currentTimeMillis()) + " " + tfNick.getText() + ": " + tfMsg.getText());
 
+        String msg;
         String cmd = getFirstWord(tfMsg.getText());
         SocketCommand socketCommand = SocketCommand.find(cmd);
-        String msg;
         if (socketCommand == null)
             msg = SocketCommand.BROADCAST.getName() + " " + tfMsg.getText();
         else
